@@ -1,0 +1,50 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { adminFetch, tokenFrom } from '../../lib/admin';
+
+const token = tokenFrom(Astro.cookies);
+if (!token) return Astro.redirect('/admin/login');
+
+interface Summary {
+  colleges: number;
+  active: number;
+  hidden: number;
+  withNirf: number;
+  staff?: number;
+  user: { name: string; email: string; role: string };
+}
+
+let summary: Summary;
+try {
+  summary = await adminFetch<Summary>(token, '/api/admin/summary');
+} catch {
+  return Astro.redirect('/admin/login');
+}
+
+const number = new Intl.NumberFormat('en-IN');
+const cards = [
+  ['Colleges', summary.colleges],
+  ['Shown on the site', summary.active],
+  ['Hidden', summary.hidden],
+  ['With a NIRF rank', summary.withNirf],
+];
+---
+
+<Admin title="Admin | Admission Setu" user={summary.user} section="dashboard">
+  <h1 class="text-2xl font-black tracking-tight">Dashboard</h1>
+  <p class="mt-1 text-sm text-slate-600">Find a college, then edit its name, address, photos, and page sections.</p>
+  <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    {cards.map(([label, value]) => (
+      <article class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        <p class="mt-2 text-2xl font-black">{number.format(Number(value))}</p>
+      </article>
+    ))}
+  </div>
+  <div class="mt-6 flex flex-wrap gap-3">
+    <a href="/admin/colleges" class="inline-flex h-11 items-center rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white">Manage colleges</a>
+    {summary.user.role === 'admin' && (
+      <a href="/admin/users" class="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold">Team{summary.staff != null ? ` · ${number.format(summary.staff)}` : ''}</a>
+    )}
+  </div>
+</Admin>

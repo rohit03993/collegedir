@@ -1,0 +1,329 @@
+---
+import Base from '../layouts/Base.astro';
+import Pager from '../components/Pager.astro';
+import { ApiError, getPrediction } from '../lib/api';
+import { requestedPage } from '../lib/paging';
+import type { PredictPayload, PredictRow } from '../lib/types';
+
+const number = new Intl.NumberFormat('en-IN');
+const params = Astro.url.searchParams;
+const exam = params.get('exam') || '';
+const rank = params.get('rank') || '';
+const category = params.get('category') || '';
+const gender = params.get('gender') || '';
+const homeState = params.get('home_state') || '';
+const homeChoice = homeState || 'Uttar Pradesh';
+const crl = params.get('crl') || '';
+const genderChosen = gender === 'male' || gender === 'female';
+const branch = params.get('branch') || '';
+const page = requestedPage(params.get('page'));
+const examChoice = exam || 'JEE Main';
+const categoryChoice = category || 'OPEN';
+
+let payload: PredictPayload | null = null;
+let error = '';
+try {
+  payload = await getPrediction(params);
+  if (payload.error) error = payload.error;
+  if (rank && !genderChosen) error = 'Choose male or female.';
+} catch (err) {
+  error = err instanceof ApiError ? err.message : 'Setu Predictor is unavailable.';
+}
+
+const options = payload?.options;
+const result = payload?.result;
+const field = 'h-11 w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-orange-400';
+const quietField = 'h-10 w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-orange-400';
+
+function hrefFor(nextPage: number) {
+  const next = new URLSearchParams(params);
+  if (nextPage > 1) next.set('page', String(nextPage));
+  else next.delete('page');
+  const text = next.toString();
+  return text ? `/predictor?${text}` : '/predictor';
+}
+
+const chanceRank: Record<string, number> = { Safer: 0, Possible: 1, Unlikely: 2 };
+
+function seatKey(college: string, seat: PredictRow) {
+  return [college, seat.branch, seat.quota, seat.gender, seat.roundName, seat.closingRank].join('|');
+}
+
+function collegesOnPage(rows: PredictRow[]) {
+  const groups: Array<{ college: string; slug: string | null; nirf: number | null; fee: string | null; seats: PredictRow[] }> = [];
+  const seen = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.college;
+    const found = seen.get(key);
+    if (found === undefined) {
+      seen.set(key, groups.length);
+      groups.push({ college: row.college, slug: row.slug, nirf: row.nirf, fee: row.fee, seats: [row] });
+    } else {
+      const group = groups[found];
+      if (!group.slug && row.slug) group.slug = row.slug;
+      group.seats.push(row);
+    }
+  }
+  for (const group of groups) {
+    group.seats.sort((left, right) => (chanceRank[left.chance] ?? 9) - (chanceRank[right.chance] ?? 9) || left.closingRank - right.closingRank);
+  }
+  return groups;
+}
+
+function branchHref(name: string) {
+  const next = new URLSearchParams(params);
+  next.delete('page');
+  if (name) next.set('branch', name);
+  else next.delete('branch');
+  return `/predictor?${next.toString()}`;
+}
+---
+
+<Base title="Setu Predictor | Admission Setu" description="India's most trusted rank predictor and India's best prediction for 2027. JoSAA and CSAB are together in one list.">
+  <main class="mx-auto min-w-0 max-w-6xl overflow-x-clip px-4 py-6 sm:py-8">
+    <nav class="text-sm text-slate-500">
+      <a href="/" class="hover:text-slate-800">Home</a>
+      <span> / </span>
+      <span class="text-slate-800">Setu Predictor</span>
+    </nav>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <p class="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">India's most trusted rank predictor</p>
+      <p class="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">India's best prediction for 2027</p>
+    </div>
+    <h1 class="mt-3 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Setu Predictor</h1>
+    <p class="mt-2 max-w-3xl text-sm text-slate-600">
+      The engineering college predictor. Enter a JEE Main or JEE Advanced rank. JoSAA and CSAB are both in this one list, so every engineering counselling path is here. The list uses the official 2026 closing ranks. A CSAB tag means that seat was filled in the later round.
+    </p>
+
+    {
+      options ? (
+        <form method="get" class="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
+          <div class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
+            <label class="block min-w-0 text-sm font-medium text-slate-700">
+              Your rank
+              <input name="rank" type="number" min="1" required value={rank} placeholder="For General, this is the common rank" class={`mt-1 ${field}`} />
+            </label>
+            <label class="block min-w-0 text-sm font-medium text-slate-700">
+              Home state
+              <select name="home_state" required class={`mt-1 ${field}`}>
+                {options.states.map((item) => (
+                  <option value={item} selected={item === homeChoice}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <label class="block min-w-0 text-sm font-medium text-slate-700">
+              Gender
+              <select name="gender" required class={`mt-1 ${field}`}>
+                <option value="">Select</option>
+                {options.genders.map((item) => (
+                  <option value={item.value} selected={item.value === gender}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div class="mt-4 grid min-w-0 grid-cols-1 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
+            <label class="block min-w-0 text-xs font-medium text-slate-500">
+              Exam
+              <select name="exam" required class={`mt-1 ${quietField}`}>
+                {options.exams.map((item) => (
+                  <option value={item} selected={item === examChoice}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <label class="block min-w-0 text-xs font-medium text-slate-500">
+              Category
+              <select name="category" required class={`mt-1 ${quietField}`}>
+                {options.categories.map((item) => (
+                  <option value={item.value} selected={item.value === categoryChoice}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+            <label class:list={[categoryChoice === 'OPEN' ? 'hidden' : 'block', 'min-w-0 text-xs font-medium text-slate-500']} data-crl>
+              Common rank
+              <input name="crl" type="number" min="1" value={crl} required={categoryChoice !== 'OPEN'} placeholder="Needed for CSAB" class={`mt-1 ${quietField}`} />
+            </label>
+          </div>
+          <button type="submit" class="mt-4 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white">Check colleges</button>
+        </form>
+      ) : null
+    }
+
+    {error && <p class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+
+    {
+      result && genderChosen && (
+        <div class="mt-8 space-y-8">
+          {result.sections.map((section) => (
+            <section>
+              <h2 class="text-2xl font-black tracking-tight text-slate-900">{number.format(section.inside)} seats for rank {number.format(result.rank)}</h2>
+              <p class="mt-1 text-sm text-slate-500">{result.exam}, {result.category}, {result.gender}, {result.homeState}{result.crl ? `, common rank ${number.format(result.crl)}` : ''}.</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <p class="min-w-28 rounded-2xl border border-slate-200 bg-white px-4 py-2">
+                  <span class="block text-xs text-slate-500">JoSAA</span>
+                  <span class="text-lg font-bold text-slate-900">{number.format(section.josaaInside)}</span>
+                </p>
+                {
+                  section.csabInside !== null && (
+                    <p class="min-w-28 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2">
+                      <span class="block text-xs text-orange-700">CSAB</span>
+                      <span class="text-lg font-bold text-slate-900">{number.format(section.csabInside)}</span>
+                    </p>
+                  )
+                }
+              </div>
+              <p class="mt-3 max-w-3xl text-sm text-slate-600">{section.detail} {result.note}{branch ? ` Showing ${branch}.` : ''}</p>
+              {
+                section.families.length > 0 && (
+                  <div class="mt-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Branch</p>
+                    <div class="mt-2 flex max-w-full flex-wrap gap-2">
+                      <a href={branchHref('')} class:list={['rounded-full px-3 py-1.5 text-sm font-semibold', branch ? 'border border-slate-200 bg-white text-slate-700' : 'bg-orange-500 text-white']}>All</a>
+                      {section.families.map((family) => (
+                        <a href={branchHref(family.name)} class:list={['rounded-full px-3 py-1.5 text-sm font-semibold', branch === family.name ? 'bg-orange-500 text-white' : 'border border-slate-200 bg-white text-slate-700']}>
+                          {family.name}
+                          <span class:list={['ml-1', branch === family.name ? 'text-orange-100' : 'text-slate-400']}>{number.format(family.count)}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              }
+              <div data-hidden-bar class="mt-4 hidden items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                <p data-hidden-label>Branches are hidden from this list.</p>
+                <button type="button" data-show-hidden class="font-semibold text-orange-600">Show them</button>
+              </div>
+              {
+                section.rows.length === 0 ? (
+                  <p class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-8 text-sm text-slate-600">No seat in this list matches these choices.</p>
+                ) : (
+                  <div class="mt-4 space-y-3">
+                    {collegesOnPage(section.rows).map((college) => (
+                      <article data-college class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                          {
+                            college.slug ? (
+                              <a href={`/colleges/${encodeURIComponent(college.slug)}`} class="break-words font-semibold text-slate-900 hover:text-orange-600">{college.college}</a>
+                            ) : (
+                              <h3 class="break-words font-semibold text-slate-900">{college.college}</h3>
+                            )
+                          }
+                          <span data-best class:list={['rounded-full px-2 py-0.5 text-xs font-semibold', college.seats[0].chance === 'Safer' ? 'bg-green-100 text-green-800' : college.seats[0].chance === 'Possible' ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-600']}>{college.seats[0].chance}</span>
+                          <span data-branch-count class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{college.seats.length} {college.seats.length === 1 ? 'branch' : 'branches'}</span>
+                        </div>
+                        {
+                          (college.nirf || college.fee) && (
+                            <p class="mt-1 break-words text-sm text-slate-600">
+                              {college.nirf ? `NIRF ${college.nirf}` : ''}
+                              {college.nirf && college.fee ? ' · ' : ''}
+                              {college.fee ? `Fees ${college.fee}` : ''}
+                            </p>
+                          )
+                        }
+                        <div class="mt-3 space-y-2">
+                          {college.seats.map((seat) => (
+                            <div data-seat={seatKey(college.college, seat)} data-chance={seat.chance} class:list={['flex min-w-0 flex-col gap-2 rounded-xl px-3 py-2 sm:flex-row sm:items-center sm:justify-between', seat.chance === 'Safer' ? 'bg-green-50' : seat.chance === 'Possible' ? 'bg-orange-50' : 'bg-slate-50']}>
+                              <div class="min-w-0">
+                                <p class="break-words text-sm font-semibold text-slate-900">{seat.branch}</p>
+                                <p class="mt-1 break-words text-xs text-slate-600">
+                                  {seat.state} · {seat.quota}
+                                  {seat.gender ? ` · ${seat.gender}` : ''}
+                                  {` · ${seat.roundName}`}
+                                  {seat.roundName === 'CSAB round' && seat.round ? ` ${seat.round}` : ''}
+                                </p>
+                              </div>
+                              <div class="flex items-center justify-between gap-4 sm:shrink-0">
+                                <div class="sm:text-right">
+                                  <p class:list={['text-sm font-semibold', seat.chance === 'Safer' ? 'text-green-700' : seat.chance === 'Possible' ? 'text-orange-600' : 'text-slate-500']}>{seat.chance}</p>
+                                  <p class="text-sm font-bold text-slate-900">Closing {number.format(seat.closingRank)}</p>
+                                </div>
+                                <button type="button" data-hide={seatKey(college.college, seat)} class="text-xs font-semibold text-slate-400 hover:text-slate-700">Hide</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )
+              }
+              <Pager page={page} total={section.total} pageSize={section.pageSize || 20} href={hrefFor} />
+            </section>
+          ))}
+        </div>
+      )
+    }
+  </main>
+  <script>
+    const categorySelect = document.querySelector('select[name="category"]');
+    const crlField = document.querySelector('[data-crl]');
+    const crlInput = crlField?.querySelector('input');
+    const syncCrl = () => {
+      if (!(categorySelect instanceof HTMLSelectElement) || !(crlField instanceof HTMLElement) || !(crlInput instanceof HTMLInputElement)) return;
+      const reserved = categorySelect.value !== 'OPEN';
+      crlField.classList.toggle('hidden', !reserved);
+      crlField.classList.toggle('block', reserved);
+      crlInput.required = reserved;
+    };
+    categorySelect?.addEventListener('change', syncCrl);
+    syncCrl();
+
+    const hiddenKey = 'setu-predictor-hidden';
+    const readHidden = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(hiddenKey) || '[]');
+        return new Set(Array.isArray(saved) ? saved : []);
+      } catch {
+        return new Set();
+      }
+    };
+    const applyHidden = () => {
+      const hidden = readHidden();
+      let count = 0;
+      document.querySelectorAll('[data-seat]').forEach((seat) => {
+        if (!(seat instanceof HTMLElement)) return;
+        const hide = hidden.has(seat.dataset.seat);
+        seat.classList.toggle('hidden', hide);
+        if (hide) count += 1;
+      });
+      document.querySelectorAll('[data-college]').forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        const seats = [...card.querySelectorAll('[data-seat]')].filter((seat) => seat instanceof HTMLElement);
+        const visible = seats.filter((seat) => !seat.classList.contains('hidden'));
+        card.classList.toggle('hidden', seats.length > 0 && visible.length === 0);
+        const best = card.querySelector('[data-best]');
+        const first = visible[0];
+        if (best instanceof HTMLElement && first instanceof HTMLElement && first.dataset.chance) {
+          const chance = first.dataset.chance;
+          best.textContent = chance;
+          best.className = `rounded-full px-2 py-0.5 text-xs font-semibold ${chance === 'Safer' ? 'bg-green-100 text-green-800' : chance === 'Possible' ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-600'}`;
+        }
+        const tally = card.querySelector('[data-branch-count]');
+        if (tally) tally.textContent = `${visible.length} ${visible.length === 1 ? 'branch' : 'branches'}`;
+      });
+      const bar = document.querySelector('[data-hidden-bar]');
+      if (bar instanceof HTMLElement) {
+        bar.classList.toggle('hidden', count === 0);
+        bar.classList.toggle('flex', count > 0);
+        const label = bar.querySelector('[data-hidden-label]');
+        if (label) label.textContent = count === 1 ? '1 branch is hidden from this list.' : `${count} branches are hidden from this list.`;
+      }
+    };
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const hide = target.closest('[data-hide]');
+      if (hide instanceof HTMLElement && hide.dataset.hide) {
+        const hidden = readHidden();
+        hidden.add(hide.dataset.hide);
+        localStorage.setItem(hiddenKey, JSON.stringify([...hidden]));
+        applyHidden();
+        return;
+      }
+      if (target.closest('[data-show-hidden]')) {
+        localStorage.removeItem(hiddenKey);
+        applyHidden();
+      }
+    });
+    applyHidden();
+  </script>
+</Base>

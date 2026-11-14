@@ -1,0 +1,123 @@
+---
+import Base from '../layouts/Base.astro';
+import CollegeCard from '../components/CollegeCard.astro';
+import { ApiError, getHome } from '../lib/api';
+import type { HomePayload } from '../lib/types';
+import { named, shownDate } from '../lib/text';
+
+let home: HomePayload | null = null;
+let error = '';
+try {
+  home = await getHome();
+} catch (err) {
+  error = err instanceof ApiError ? err.message : 'The catalogue is unavailable.';
+}
+
+const number = new Intl.NumberFormat('en-IN');
+---
+
+<Base title="Admission Setu">
+  <section class="bg-[linear-gradient(118deg,#fff7f1_0%,#f8fbff_48%,#eef5ff_100%)]">
+    <div class="mx-auto max-w-6xl px-4 py-12 md:py-16">
+      <h1 class="max-w-3xl text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+        Discover your ideal path
+      </h1>
+      <p class="mt-4 max-w-2xl text-base text-slate-600">
+        Search colleges, courses, and places. Fees, photos, and approvals appear only when the catalogue has them.
+      </p>
+      <a href="/predictor" class="mt-3 inline-flex text-sm font-semibold text-orange-600">Setu Predictor for engineering colleges</a>
+      <form action="/colleges" method="get" class="mt-6 flex max-w-2xl gap-2" role="search">
+        <label class="sr-only" for="hero-search">Search colleges, courses, cities, or states</label>
+        <input
+          id="hero-search"
+          type="search"
+          name="q"
+          placeholder="Search colleges, courses, cities, or states"
+          class="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 outline-none focus:border-orange-400"
+        />
+        <button type="submit" class="rounded-2xl bg-orange-500 px-5 font-semibold text-white">Search</button>
+      </form>
+      {
+        home?.suggestions.length ? (
+          <div class="mt-5">
+            <p class="text-sm font-semibold text-slate-700">Suggested searches</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              {home.suggestions.map((item) => (
+                <a href={item.href} class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null
+      }
+    </div>
+  </section>
+
+  <main class="mx-auto max-w-6xl space-y-12 px-4 py-10">
+    {error && <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+    {
+      home?.next.length ? (
+        <section>
+          <h2 class="text-xl font-bold">What to do next</h2>
+          <p class="mt-1 text-sm text-slate-600">Choose a stream and open the college list.</p>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {home.next.map((stream) => (
+              <a href={stream.href} class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <span class="block font-semibold">{stream.name}</span>
+                <span class="mt-1 block text-sm text-slate-500">{number.format(stream.count)} colleges</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null
+    }
+    {
+      home?.streams.length ? (
+        <section>
+          <h2 class="text-xl font-bold">Streams</h2>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {home.streams.map((stream) => (
+              <a href={stream.href} class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium">
+                {stream.name}
+                <span class="text-slate-500"> {number.format(stream.count)}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null
+    }
+    {
+      home?.colleges.length ? (
+        <section>
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-xl font-bold">Top colleges</h2>
+            <a href="/colleges" class="text-sm font-semibold text-orange-600">View all</a>
+          </div>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {home.colleges.map((college) => <CollegeCard college={college} />)}
+          </div>
+        </section>
+      ) : null
+    }
+    {
+      home?.exams.length ? (
+        <section>
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-xl font-bold">Top exams</h2>
+            <a href="/exams" class="text-sm font-semibold text-orange-600">View all</a>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {home.exams.map((exam) => (
+              <a href={exam.href} class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <span class="block font-semibold">{exam.name}</span>
+                {named(exam.category) && <span class="mt-1 block text-sm text-slate-600">{named(exam.category)}</span>}
+                {shownDate(exam.date) && <span class="mt-1 block text-sm text-slate-500">{shownDate(exam.date)}</span>}
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null
+    }
+  </main>
+</Base>

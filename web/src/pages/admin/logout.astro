@@ -1,0 +1,16 @@
+---
+import { adminFetch, clearSession, tokenFrom } from '../../lib/admin';
+
+if (Astro.request.method === 'POST') {
+  const token = tokenFrom(Astro.cookies);
+  if (token) {
+    try {
+      await adminFetch(token, '/api/admin/logout', { method: 'POST' });
+    } catch {
+      // The cookie is cleared either way.
+    }
+  }
+  clearSession(Astro.cookies);
+}
+return Astro.redirect('/admin/login');
+---

@@ -1,0 +1,45 @@
+---
+import Base from '../../layouts/Base.astro';
+import HtmlSection from '../../components/HtmlSection.astro';
+import { ApiError, getArticle } from '../../lib/api';
+import type { ArticleDetail } from '../../lib/types';
+
+const { slug } = Astro.params;
+let article: ArticleDetail | null = null;
+let error = '';
+let status = 200;
+try {
+  article = await getArticle(slug || '');
+} catch (err) {
+  status = err instanceof ApiError ? err.status : 503;
+  error = err instanceof ApiError ? err.message : 'This article is unavailable.';
+}
+if (status !== 200) Astro.response.status = status;
+---
+
+<Base title={article ? `${article.title} | Admission Setu` : 'News | Admission Setu'}>
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    {error && <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+    {
+      article && (
+        <article class="space-y-8">
+          <nav class="text-sm text-slate-500">
+            <a href="/" class="hover:text-slate-800">Home</a>
+            <span> / </span>
+            <a href="/news" class="hover:text-slate-800">News</a>
+            <span> / </span>
+            <span class="text-slate-800">{article.title}</span>
+          </nav>
+          <header>
+            <h1 class="text-3xl font-black tracking-tight">{article.title}</h1>
+            {(article.category || article.author) && (
+              <p class="mt-3 text-sm text-slate-500">{[article.category, article.author].filter(Boolean).join(' · ')}</p>
+            )}
+            {article.description && <p class="mt-4 text-slate-700">{article.description}</p>}
+          </header>
+          <HtmlSection title="Article" html={article.contentHtml} />
+        </article>
+      )
+    }
+  </main>
+</Base>

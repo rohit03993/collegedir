@@ -1,0 +1,50 @@
+---
+import Base from '../../layouts/Base.astro';
+import HtmlSection from '../../components/HtmlSection.astro';
+import { ApiError, getScholarship } from '../../lib/api';
+import type { ScholarshipDetail } from '../../lib/types';
+
+const { slug } = Astro.params;
+let item: ScholarshipDetail | null = null;
+let error = '';
+let status = 200;
+try {
+  item = await getScholarship(slug || '');
+} catch (err) {
+  status = err instanceof ApiError ? err.status : 503;
+  error = err instanceof ApiError ? err.message : 'This scholarship page is unavailable.';
+}
+if (status !== 200) Astro.response.status = status;
+const facts = item ? [item.provider, item.category, item.level, item.deadline].filter(Boolean) : [];
+---
+
+<Base title={item ? `${item.title} | Admission Setu` : 'Scholarship | Admission Setu'}>
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    {error && <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+    {
+      item && (
+        <article class="space-y-8">
+          <nav class="text-sm text-slate-500">
+            <a href="/" class="hover:text-slate-800">Home</a>
+            <span> / </span>
+            <a href="/scholarships" class="hover:text-slate-800">Scholarships</a>
+            <span> / </span>
+            <span class="text-slate-800">{item.title}</span>
+          </nav>
+          <header class="rounded-3xl border border-slate-200 bg-white p-5 md:p-8">
+            <h1 class="text-3xl font-black tracking-tight">{item.title}</h1>
+            {facts.length > 0 && <p class="mt-3 text-sm text-slate-600">{facts.join(' · ')}</p>}
+            {item.amount && <p class="mt-4 text-sm font-medium text-slate-800">{item.amount}</p>}
+            {
+              item.applyUrl && (
+                <a href={item.applyUrl} class="mt-4 inline-flex text-sm font-semibold text-orange-600" rel="noopener noreferrer">Official application</a>
+              )
+            }
+          </header>
+          <HtmlSection title="Eligibility" html={item.eligibilityHtml} />
+          <HtmlSection title="Details" html={item.descriptionHtml} />
+        </article>
+      )
+    }
+  </main>
+</Base>

@@ -1,0 +1,81 @@
+---
+import Base from '../../layouts/Base.astro';
+import Pager from '../../components/Pager.astro';
+import { ApiError, getCourses } from '../../lib/api';
+import { PAGE_SIZE, pageCount, requestedPage, withPage } from '../../lib/paging';
+import type { CourseList } from '../../lib/types';
+
+const query = (Astro.url.searchParams.get('q') || '').trim();
+const category = (Astro.url.searchParams.get('category') || '').trim();
+const page = requestedPage(Astro.url.searchParams.get('page'));
+const params = new URLSearchParams();
+if (query) params.set('q', query);
+if (category) params.set('category', category);
+params.set('page', String(page));
+params.set('per_page', String(PAGE_SIZE));
+
+let list: CourseList | null = null;
+let error = '';
+try {
+  list = await getCourses(params);
+} catch (err) {
+  error = err instanceof ApiError ? err.message : 'The course list is unavailable.';
+}
+const total = list?.total || 0;
+const shown = list?.items.length || 0;
+const from = shown === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+const to = shown === 0 ? 0 : from + shown - 1;
+const number = new Intl.NumberFormat('en-IN');
+const pageHref = (target: number) => withPage('/courses', Astro.url.searchParams, target);
+if (list && page > pageCount(total)) return Astro.redirect(pageHref(pageCount(total)));
+---
+
+<Base title="Courses | Admission Setu" query={query}>
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <nav class="text-sm text-slate-500">
+      <a href="/" class="hover:text-slate-800">Home</a>
+      <span> / </span>
+      <span class="text-slate-800">Courses</span>
+    </nav>
+    <h1 class="mt-3 text-3xl font-black tracking-tight">Courses</h1>
+    {list && <p class="mt-1 text-sm text-slate-600">Showing {number.format(from)}–{number.format(to)} of {number.format(total)}</p>}
+    {error && <p class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+    <form action="/courses" method="get" class="mt-5" role="search">
+      {category && <input type="hidden" name="category" value={category} />}
+      <label class="sr-only" for="course-search">Search courses</label>
+      <input id="course-search" type="search" name="q" value={query} placeholder="Search courses" class="h-11 w-full rounded-full border border-slate-200 bg-white px-4 text-sm outline-none focus:border-orange-400" />
+    </form>
+    {
+      list && list.categories.length > 0 && (
+        <div class="mt-4 flex flex-wrap gap-2">
+          {list.categories.map((item) => (
+            <a
+              href={`/courses?category=${encodeURIComponent(item.name)}`}
+              class:list={[
+                'rounded-full border px-3 py-1.5 text-sm',
+                category === item.name ? 'border-orange-500 bg-orange-50 font-semibold text-orange-700' : 'border-slate-200 bg-white text-slate-700',
+              ]}
+            >
+              {item.name}
+              <span class="text-slate-500"> {number.format(item.count)}</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+    {
+      list && list.items.length === 0 && total === 0 && (
+        <p class="mt-6 rounded-2xl border border-slate-200 bg-white px-4 py-8 text-sm text-slate-600">No courses match this search.</p>
+      )
+    }
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+      {list?.items.map((course) => (
+        <a href={`/courses/${encodeURIComponent(course.slug)}`} class="rounded-2xl border border-slate-200 bg-white px-4 py-4 hover:border-orange-300">
+          <h2 class="font-semibold text-slate-900">{course.name}</h2>
+          <p class="mt-2 text-sm text-slate-500">{[course.category, course.level, course.duration, course.mode].filter(Boolean).join(' · ')}</p>
+        </a>
+      ))}
+    </div>
+    {list && total > 0 && <Pager page={page} total={total} href={pageHref} />}
+  </main>
+</Base>

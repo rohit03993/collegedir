@@ -1,0 +1,161 @@
+---
+import type { FacetValue } from '../lib/types';
+
+interface Props {
+  query: string;
+  selected: Record<string, string[]>;
+  facets: Record<string, FacetValue[]>;
+}
+
+const { query, selected, facets } = Astro.props;
+const groups = [
+  ['stream', 'Streams', 'Search streams'],
+  ['course', 'Course groups', 'Search course groups'],
+  ['state', 'States', 'Search states'],
+  ['city', 'Cities', 'Search cities'],
+  ['branch', 'Branches', 'Search branches'],
+] as const;
+
+function without(dropKey: string, dropValue: string) {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  for (const [key] of groups) {
+    for (const value of selected[key] || []) {
+      if (key === dropKey && value === dropValue) continue;
+      params.append(key, value);
+    }
+  }
+  const text = params.toString();
+  return text ? `/colleges?${text}` : '/colleges';
+}
+
+const clearHref = query ? `/colleges?q=${encodeURIComponent(query)}` : '/colleges';
+const activeCount = groups.reduce((sum, [key]) => sum + (selected[key] || []).length, 0);
+---
+
+<form id="filters" action="/colleges" method="get" class="rounded-2xl border border-slate-200 bg-white px-4 py-1">
+  {query && <input type="hidden" name="q" value={query} />}
+  <div class="flex items-center justify-between border-b border-slate-200 py-3">
+    <p class="text-sm font-bold text-slate-900">Filter by</p>
+    {
+      (activeCount > 0 || query) && (
+        <a href={clearHref} class="text-xs font-semibold text-orange-600 hover:underline">Clear all</a>
+      )
+    }
+  </div>
+  {
+    groups.map(([key, label, placeholder]) => {
+      const picked = selected[key] || [];
+      const pickedSet = new Set(picked);
+      const ordered = [...(facets[key] || [])].sort((a, b) => Number(pickedSet.has(b.value)) - Number(pickedSet.has(a.value)));
+      if (!ordered.length && !picked.length) return null;
+      const visible = ordered.slice(0, Math.max(6, picked.length));
+      const extra = ordered.slice(visible.length);
+      return (
+        <details open data-group class="filter-group border-b border-slate-200 last:border-b-0">
+          <summary class="flex cursor-pointer items-center py-3 text-sm font-semibold text-slate-900">
+            <span class="flex-1 text-left">{label}</span>
+            {picked.length > 0 && (
+              <span class="mr-2 inline-flex h-5 items-center rounded-full bg-orange-50 px-1.5 text-[10px] font-semibold text-orange-600">{picked.length}</span>
+            )}
+            <svg viewBox="0 0 24 24" class="filter-chevron h-4 w-4 text-slate-400" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </summary>
+          <div class="space-y-2 pb-3">
+            <div class="relative">
+              <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2" />
+                <path d="m21 21-4.3-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <input
+                type="search"
+                data-filter-search
+                placeholder={placeholder}
+                class="h-8 w-full rounded-lg border border-slate-200 pl-8 pr-2 text-xs outline-none focus:border-orange-400"
+              />
+            </div>
+            {
+              picked.length > 0 && (
+                <div class="flex flex-wrap gap-1.5">
+                  {picked.map((value) => (
+                    <a href={without(key, value)} class="inline-flex max-w-full items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700 hover:bg-orange-100">
+                      <span class="truncate">{value}</span>
+                      <span aria-hidden="true">×</span>
+                      <span class="sr-only">Remove {value}</span>
+                    </a>
+                  ))}
+                </div>
+              )
+            }
+            <div class="space-y-1">
+              {visible.map((option) => (
+                <label data-option={option.value.toLowerCase()} class="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-xs text-slate-800 hover:bg-slate-50 has-[:checked]:font-medium has-[:checked]:text-orange-600">
+                  <input type="checkbox" name={key} value={option.value} checked={pickedSet.has(option.value)} class="h-4 w-4 shrink-0 accent-orange-500" />
+                  <span class="min-w-0 flex-1 truncate">{option.value}</span>
+                  <span class="shrink-0 tabular-nums text-[11px] text-slate-400">{option.count}</span>
+                </label>
+              ))}
+              {extra.map((option) => (
+                <label data-option={option.value.toLowerCase()} data-extra style="display:none" class="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-xs text-slate-800 hover:bg-slate-50 has-[:checked]:font-medium has-[:checked]:text-orange-600">
+                  <input type="checkbox" name={key} value={option.value} checked={pickedSet.has(option.value)} class="h-4 w-4 shrink-0 accent-orange-500" />
+                  <span class="min-w-0 flex-1 truncate">{option.value}</span>
+                  <span class="shrink-0 tabular-nums text-[11px] text-slate-400">{option.count}</span>
+                </label>
+              ))}
+            </div>
+            {
+              extra.length > 0 && (
+                <button type="button" data-more class="text-xs font-medium text-orange-600 hover:underline">
+                  + {extra.length} more
+                </button>
+              )
+            }
+          </div>
+        </details>
+      );
+    })
+  }
+</form>
+
+<script is:inline>
+  document.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+    if (target.form?.id !== 'filters') return;
+    target.form.requestSubmit();
+  });
+
+  document.addEventListener('input', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.matches('[data-filter-search]')) return;
+    const group = target.closest('[data-group]');
+    if (!group) return;
+    const query = target.value.trim().toLowerCase();
+    const expanded = group.getAttribute('data-expanded') === 'true';
+    group.querySelectorAll('[data-option]').forEach((row) => {
+      const name = row.getAttribute('data-option') || '';
+      const extra = row.hasAttribute('data-extra');
+      const hide = query ? !name.includes(query) : extra && !expanded;
+      row.style.display = hide ? 'none' : '';
+    });
+    const more = group.querySelector('[data-more]');
+    if (more) more.hidden = query.length > 0;
+  });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const more = target.closest('[data-more]');
+    if (!more) return;
+    const group = more.closest('[data-group]');
+    if (!group) return;
+    const expanded = group.getAttribute('data-expanded') === 'true';
+    group.setAttribute('data-expanded', expanded ? 'false' : 'true');
+    group.querySelectorAll('[data-extra]').forEach((row) => {
+      row.style.display = expanded ? 'none' : '';
+    });
+    const count = group.querySelectorAll('[data-extra]').length;
+    more.textContent = expanded ? `+ ${count} more` : 'Show less';
+  });
+</script>

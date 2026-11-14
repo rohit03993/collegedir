@@ -1,0 +1,63 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import { ApiError } from '../../../lib/api';
+import { adminFetch, fieldClass, tokenFrom } from '../../../lib/admin';
+
+const token = tokenFrom(Astro.cookies);
+if (!token) return Astro.redirect('/admin/login');
+
+interface User { name: string; role: string }
+let user: User;
+try {
+  user = await adminFetch<User>(token, '/api/admin/me');
+} catch {
+  return Astro.redirect('/admin/login');
+}
+
+let error = '';
+let name = '';
+let slug = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  name = String(form.get('name') || '');
+  slug = String(form.get('slug') || '');
+  try {
+    const saved = await adminFetch<{ slug: string }>(token, '/api/admin/colleges', {
+      method: 'POST',
+      body: JSON.stringify({ name, slug }),
+    });
+    return Astro.redirect(`/admin/colleges/${encodeURIComponent(saved.slug)}?saved=1`);
+  } catch (err) {
+    error = err instanceof ApiError ? err.message : 'The college was not created.';
+  }
+}
+---
+
+<Admin title="New college | Admin" user={user} section="colleges">
+  <h1 class="text-2xl font-black tracking-tight">New college</h1>
+  <p class="mt-1 text-sm text-slate-600">Create the record, then fill the photos and page sections.</p>
+  {error && <p class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+  <form method="post" class="mt-5 max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+    <label class="block text-sm font-medium">
+      Name
+      <input id="college-name" name="name" required value={name} class:list={['mt-1', fieldClass]} />
+    </label>
+    <label class="block text-sm font-medium">
+      Slug
+      <input id="college-slug" name="slug" required value={slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" class:list={['mt-1', fieldClass]} />
+      <span class="mt-1 block text-xs text-slate-500">Lowercase letters, numbers, and hyphens. This becomes the public address.</span>
+    </label>
+    <button type="submit" class="h-11 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white">Create college</button>
+  </form>
+  <script>
+    const name = document.querySelector('#college-name');
+    const slug = document.querySelector('#college-slug');
+    name?.addEventListener('input', () => {
+      if (!(name instanceof HTMLInputElement) || !(slug instanceof HTMLInputElement) || slug.dataset.touched === '1') return;
+      slug.value = name.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    });
+    slug?.addEventListener('input', () => {
+      if (slug instanceof HTMLInputElement) slug.dataset.touched = '1';
+    });
+  </script>
+</Admin>

@@ -1,0 +1,546 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import { ApiError } from '../../../lib/api';
+import { adminFetch, areaClass, fieldClass, tokenFrom } from '../../../lib/admin';
+import { galleryItems, normalizeGallery, photoState, removeNamed, saveNamed } from '../../../lib/photos';
+
+const token = tokenFrom(Astro.cookies);
+if (!token) return Astro.redirect('/admin/login');
+const slug = Astro.params.slug || '';
+if (!slug || slug === 'new') return Astro.redirect('/admin/colleges/new');
+
+interface User { name: string; role: string }
+interface CollegeForm {
+  name: string;
+  slug: string;
+  active: boolean;
+  city: string;
+  state: string;
+  type: string;
+  category: string;
+  established: string;
+  priority: string;
+  featuredRank: string;
+  rating: string;
+  reviews: string;
+  feesText: string;
+  imageUrl: string;
+  logoUrl: string;
+  imagePath: string;
+  logoPath: string;
+  approvals: string;
+  gallery: string;
+  tags: string;
+  description: string;
+  admission: string;
+  cutoff: string;
+  placement: string;
+  facilities: string;
+  hostel: string;
+  nirfRank: string;
+  feeRange: string;
+  averagePackage: string;
+  ownership: string;
+  approval: string;
+  exams: string;
+}
+
+let user: User;
+try {
+  user = await adminFetch<User>(token, '/api/admin/me');
+} catch {
+  return Astro.redirect('/admin/login');
+}
+
+let college: CollegeForm | null = null;
+let error = '';
+try {
+  college = await adminFetch<CollegeForm>(token, `/api/admin/colleges/${encodeURIComponent(slug)}`);
+} catch (err) {
+  error = err instanceof ApiError ? err.message : 'This college is unavailable.';
+}
+
+function postedCollege(form: FormData, current: CollegeForm) {
+  const body: CollegeForm = { ...current, active: form.get('active') === 'on' };
+  const posted = body as unknown as Record<string, string | boolean>;
+  for (const key of Object.keys(body)) {
+    if (key === 'active') continue;
+    const value = form.get(key);
+    if (typeof value === 'string') posted[key] = value;
+  }
+  return body;
+}
+
+if (Astro.request.method === 'POST' && college) {
+  const form = await Astro.request.formData();
+  const intent = String(form.get('intent') || '');
+  if (intent === 'photo' || intent === 'remove-photo') {
+    const body = postedCollege(form, college);
+    body.slug = college.slug;
+    try {
+      const slot = String(form.get('slot') || '');
+      if (intent === 'remove-photo') {
+        if (slot === 'hero') {
+          removeNamed(slug, 'hero');
+          body.imageUrl = '';
+          body.imagePath = '';
+        } else if (slot === 'logo') {
+          removeNamed(slug, 'logo');
+          body.logoUrl = '';
+          body.logoPath = '';
+        } else if (slot === 'gallery') {
+          const index = Number(form.get('index'));
+          const items = galleryItems(body.gallery);
+          if (!Number.isInteger(index) || index < 0 || index >= items.length) throw new Error('That photo is no longer in the gallery.');
+          items.splice(index, 1);
+          body.gallery = normalizeGallery(slug, items).join('\n');
+        } else {
+          throw new Error('Choose a photo to remove.');
+        }
+      } else {
+        const file = form.get('file');
+        if (!(file instanceof Blob) || file.size === 0) throw new Error('Choose an image.');
+        if (file.size > 8_000_000) throw new Error('Use an image under 8 MB.');
+        const bytes = Buffer.from(await file.arrayBuffer());
+        if (slot === 'hero') {
+          saveNamed(slug, 'hero', bytes);
+          body.imageUrl = '';
+          body.imagePath = `/media/colleges/${slug}/hero`;
+        } else if (slot === 'logo') {
+          saveNamed(slug, 'logo', bytes);
+          body.logoUrl = '';
+          body.logoPath = `/media/colleges/${slug}/logo`;
+        } else if (slot === 'gallery') {
+          const tokenName = `incoming-${Date.now()}`;
+          saveNamed(slug, tokenName, bytes);
+          const items = galleryItems(body.gallery);
+          items.push(`/media/colleges/${slug}/${tokenName}`);
+          body.gallery = normalizeGallery(slug, items).join('\n');
+        } else {
+          throw new Error('Choose a photo to add.');
+        }
+      }
+      await adminFetch(token, `/api/admin/colleges/${encodeURIComponent(slug)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      return new Response(JSON.stringify({
+        ok: true,
+        photos: photoState(slug, body),
+        fields: {
+          imageUrl: body.imageUrl,
+          imagePath: body.imagePath,
+          logoUrl: body.logoUrl,
+          logoPath: body.logoPath,
+          gallery: body.gallery,
+        },
+      }), { headers: { 'content-type': 'application/json' } });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'The photo was not saved.';
+      return new Response(JSON.stringify({ ok: false, error: message }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+  }
+  const body = postedCollege(form, college);
+  try {
+    const saved = await adminFetch<{ slug: string; notice: string }>(token, `/api/admin/colleges/${encodeURIComponent(slug)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+    const next = new URLSearchParams({ saved: '1' });
+    if (saved.notice) next.set('notice', saved.notice);
+    return Astro.redirect(`/admin/colleges/${encodeURIComponent(saved.slug)}?${next}`);
+  } catch (err) {
+    error = err instanceof ApiError ? err.message : 'The college was not saved.';
+    college = body;
+  }
+}
+
+const photos = college ? photoState(slug, college) : { hero: '', logo: '', gallery: [] as string[] };
+const fonts = ['Arial', 'Georgia', 'Tahoma', 'Times New Roman', 'Verdana', 'Courier New'];
+const sizes = [
+  { label: 'Small', value: '2' },
+  { label: 'Normal', value: '3' },
+  { label: 'Large', value: '5' },
+  { label: 'Title', value: '6' },
+];
+const rich: Array<{ key: keyof CollegeForm; label: string; placeholder: string }> = [
+  { key: 'description', label: 'Overview', placeholder: 'Write the overview' },
+  { key: 'admission', label: 'Admission', placeholder: 'Write the admission section' },
+  { key: 'cutoff', label: 'Cutoff', placeholder: 'Write the cutoff section' },
+  { key: 'placement', label: 'Placements', placeholder: 'Write the placement section' },
+  { key: 'facilities', label: 'Facilities', placeholder: 'Write the facilities section' },
+  { key: 'hostel', label: 'Hostel', placeholder: 'Write the hostel section' },
+];
+
+const saved = Astro.url.searchParams.get('saved') === '1';
+const notice = Astro.url.searchParams.get('notice') || '';
+const groups: Array<{ id: string; title: string; note: string; kind?: 'photos' | 'content'; fields: Array<{ key: keyof CollegeForm; label: string; area?: boolean; rows?: number; hint?: string }> }> = [
+  {
+    id: 'record',
+    title: 'Record',
+    note: 'The name and slug are what students see in the address and the heading.',
+    fields: [
+      { key: 'name', label: 'Name' },
+      { key: 'slug', label: 'Slug', hint: 'Changing the slug updates the public link and the related records.' },
+      { key: 'priority', label: 'Priority' },
+      { key: 'featuredRank', label: 'Home order', hint: 'A smaller number appears first on the home list. Leave empty to sort after numbered colleges.' },
+    ],
+  },
+  {
+    id: 'place',
+    title: 'Place and type',
+    note: 'These drive the public filters.',
+    fields: [
+      { key: 'city', label: 'City' },
+      { key: 'state', label: 'State' },
+      { key: 'type', label: 'Ownership' },
+      { key: 'category', label: 'Stream' },
+      { key: 'established', label: 'Established year' },
+      { key: 'rating', label: 'Rating' },
+      { key: 'reviews', label: 'Reviews' },
+    ],
+  },
+  {
+    id: 'photos',
+    title: 'Photos',
+    note: 'Remove a photo or add a new one. Photos save immediately, along with the text currently in the editors.',
+    kind: 'photos',
+    fields: [],
+  },
+  {
+    id: 'facts',
+    title: 'Short facts',
+    note: 'One approval or tag per line.',
+    fields: [
+      { key: 'feesText', label: 'Fee text' },
+      { key: 'approvals', label: 'Approvals', area: true, rows: 3 },
+      { key: 'tags', label: 'Tags', area: true, rows: 3 },
+    ],
+  },
+  {
+    id: 'content',
+    title: 'Page sections',
+    note: 'Use the toolbar for size, font, bold, italic, colour, and links. Leave a section empty to hide it on the public page.',
+    kind: 'content',
+    fields: [],
+  },
+  {
+    id: 'engineering',
+    title: 'Engineering facts',
+    note: 'NIRF and fee range from the engineering record. Empty stays empty.',
+    fields: [
+      { key: 'nirfRank', label: 'NIRF rank' },
+      { key: 'feeRange', label: 'Fee range' },
+      { key: 'averagePackage', label: 'Average package' },
+      { key: 'ownership', label: 'Ownership note' },
+      { key: 'approval', label: 'Approval note' },
+      { key: 'exams', label: 'Exams', area: true, rows: 3 },
+    ],
+  },
+];
+---
+
+<Admin title={college ? `${college.name} | Admin` : 'College | Admin'} user={user} section="colleges">
+  <p class="text-sm text-slate-500"><a href="/admin/colleges" class="font-semibold text-slate-700 hover:text-orange-600">Colleges</a></p>
+  {error && <p class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+  {saved && <p class="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">Saved.{notice ? ` ${notice}` : ''}</p>}
+  {
+    college && (
+      <form id="college-form" method="post" class="mt-4 min-w-0 space-y-4">
+        <input type="hidden" name="imageUrl" value={college.imageUrl} />
+        <input type="hidden" name="imagePath" value={college.imagePath} />
+        <input type="hidden" name="logoUrl" value={college.logoUrl} />
+        <input type="hidden" name="logoPath" value={college.logoPath} />
+        <textarea name="gallery" class="hidden">{college.gallery}</textarea>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-black tracking-tight">{college.name || 'College'}</h1>
+            <p class="mt-1 text-sm text-slate-500">{college.slug}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            {college.active && <a href={`/colleges/${encodeURIComponent(college.slug)}`} class="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold">View page</a>}
+            <button type="submit" class="h-11 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white">Save college</button>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium">
+          <input type="checkbox" name="active" checked={college.active} class="h-4 w-4 accent-orange-500" />
+          Show this college on the public site
+        </label>
+        <div class="flex flex-wrap gap-2">
+          {groups.map((group) => (
+            <a href={`#${group.id}`} class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{group.title}</a>
+          ))}
+        </div>
+        {groups.map((group) => (
+          <section id={group.id} class="scroll-mt-24 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <h2 class="text-lg font-bold">{group.title}</h2>
+            <p class="mt-1 text-sm text-slate-500">{group.note}</p>
+            {group.kind === 'photos' ? (
+              <div id="photo-board" class="mt-4 space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                  {[
+                    ['hero', 'Main photo', photos.hero],
+                    ['logo', 'Logo', photos.logo],
+                  ].map(([slot, label, src]) => (
+                    <div data-photo-slot={slot} class="rounded-2xl border border-slate-200 p-3">
+                      <p class="text-sm font-semibold">{label}</p>
+                      <img alt="" data-photo-img class:list={['mt-2 h-40 w-full rounded-xl bg-slate-100 object-contain', !src && 'hidden']} src={src || undefined} />
+                      <div data-photo-empty class:list={['mt-2 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 text-sm text-slate-500', src && 'hidden']}>No photo yet</div>
+                      <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" data-remove={slot} class:list={['h-9 rounded-lg border border-slate-200 px-3 text-sm font-semibold', !src && 'hidden']}>Remove</button>
+                        <label class="inline-flex h-9 cursor-pointer items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white">
+                          <span data-photo-action>{src ? 'Replace' : 'Add photo'}</span>
+                          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-upload={slot} class="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p class="text-sm font-semibold">Gallery</p>
+                  <div id="gallery-grid" class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {photos.gallery.map((src, index) => (
+                      <figure class="relative">
+                        <img src={src} alt="" class="h-36 w-full rounded-xl bg-slate-100 object-cover" />
+                        <button type="button" data-remove="gallery" data-index={index} class="absolute right-2 top-2 rounded-lg bg-white/95 px-2 py-1 text-xs font-semibold text-slate-800 shadow">Remove</button>
+                      </figure>
+                    ))}
+                  </div>
+                  <p id="gallery-empty" class:list={['mt-2 text-sm text-slate-500', photos.gallery.length > 0 && 'hidden']}>No gallery photos yet.</p>
+                  <label class="mt-3 inline-flex h-9 cursor-pointer items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white">
+                    Add gallery photo
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-upload="gallery" class="hidden" />
+                  </label>
+                </div>
+                <p id="photo-status" class="text-sm text-slate-500"></p>
+              </div>
+            ) : group.kind === 'content' ? (
+              <div class="mt-4 space-y-5">
+                {rich.map((field) => (
+                  <div data-workstation={field.key} class="min-w-0">
+                    <p class="text-sm font-semibold">{field.label}</p>
+                    <div data-toolbar class="mt-2 flex flex-wrap items-center gap-1">
+                      <select data-font class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm">
+                        <option value="">Font</option>
+                        {fonts.map((font) => <option value={font}>{font}</option>)}
+                      </select>
+                      <select data-size class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm">
+                        <option value="">Size</option>
+                        {sizes.map((size) => <option value={size.value}>{size.label}</option>)}
+                      </select>
+                      <button type="button" data-cmd="bold" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm font-bold">B</button>
+                      <button type="button" data-cmd="italic" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm italic">I</button>
+                      <button type="button" data-cmd="underline" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm underline">U</button>
+                      <label class="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-sm">
+                        Colour
+                        <input data-color type="color" value="#111827" class="h-6 w-8 border-0 bg-transparent p-0" />
+                      </label>
+                      <button type="button" data-cmd="createLink" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm font-semibold">Link</button>
+                      <button type="button" data-cmd="insertUnorderedList" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm">Bullets</button>
+                      <button type="button" data-cmd="insertOrderedList" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm">Numbers</button>
+                      <button type="button" data-cmd="removeFormat" class="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm">Clear</button>
+                    </div>
+                    <div
+                      data-editor={field.key}
+                      contenteditable="true"
+                      data-placeholder={field.placeholder}
+                      class="editor prose-setu mt-2 text-[15px] text-slate-800"
+                      set:html={college[field.key]}
+                    />
+                    <textarea name={field.key} class="hidden">{college[field.key]}</textarea>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                {group.fields.map((field) => (
+                  <label class:list={['block min-w-0 text-sm font-medium', field.area && 'sm:col-span-2']}>
+                    {field.label}
+                    {field.area ? (
+                      <textarea name={field.key} rows={field.rows || 6} class:list={['mt-1', areaClass]}>{college[field.key]}</textarea>
+                    ) : (
+                      <input name={field.key} value={String(college[field.key] ?? '')} class:list={['mt-1', fieldClass]} />
+                    )}
+                    {field.hint && <span class="mt-1 block text-xs font-normal text-slate-500">{field.hint}</span>}
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+        <div class="sticky bottom-3 flex justify-end">
+          <button type="submit" class="h-11 rounded-xl bg-orange-500 px-5 text-sm font-semibold text-white shadow-lg">Save college</button>
+        </div>
+      </form>
+    )
+  }
+</Admin>
+<script>
+        const form = document.querySelector<HTMLFormElement>('#college-form');
+        const board = document.querySelector<HTMLElement>('#photo-board');
+        const status = document.querySelector<HTMLElement>('#photo-status');
+        if (form && board && status) {
+          const ranges = new WeakMap<HTMLElement, Range>();
+
+          function remember(editor: HTMLElement) {
+            const selection = window.getSelection();
+            if (!selection || !selection.rangeCount) return;
+            const range = selection.getRangeAt(0);
+            if (editor.contains(range.commonAncestorContainer)) ranges.set(editor, range);
+          }
+
+          function focusEditor(editor: HTMLElement) {
+            editor.focus();
+            const range = ranges.get(editor);
+            const selection = window.getSelection();
+            if (!range || !selection) return;
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          function format(editor: HTMLElement, command: string, value?: string) {
+            remember(editor);
+            if (command === 'createLink') {
+              const url = window.prompt('Link address');
+              if (!url) return;
+              const clean = url.trim();
+              if (!/^https?:\/\//i.test(clean)) {
+                window.alert('Enter a link that starts with http:// or https://.');
+                return;
+              }
+              focusEditor(editor);
+              document.execCommand('createLink', false, clean);
+              return;
+            }
+            focusEditor(editor);
+            document.execCommand(command, false, value);
+          }
+
+          function syncEditors() {
+            form.querySelectorAll<HTMLElement>('[data-editor]').forEach((editor) => {
+              const input = form.querySelector<HTMLTextAreaElement>(`[name="${editor.dataset.editor}"]`);
+              if (input) input.value = editor.innerHTML;
+            });
+          }
+
+          form.addEventListener('submit', syncEditors);
+          form.querySelectorAll<HTMLElement>('[data-workstation]').forEach((station) => {
+            const editor = station.querySelector<HTMLElement>('[data-editor]');
+            const toolbar = station.querySelector<HTMLElement>('[data-toolbar]');
+            if (!editor || !toolbar) return;
+            toolbar.addEventListener('mousedown', (event) => {
+              const target = event.target as HTMLElement;
+              if (target.closest('button')) event.preventDefault();
+              else remember(editor);
+            });
+            toolbar.addEventListener('click', (event) => {
+              const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-cmd]');
+              if (!button?.dataset.cmd) return;
+              event.preventDefault();
+              format(editor, button.dataset.cmd);
+            });
+            toolbar.querySelector<HTMLSelectElement>('[data-font]')?.addEventListener('change', (event) => {
+              const value = (event.target as HTMLSelectElement).value;
+              if (value) format(editor, 'fontName', value);
+            });
+            toolbar.querySelector<HTMLSelectElement>('[data-size]')?.addEventListener('change', (event) => {
+              const value = (event.target as HTMLSelectElement).value;
+              if (value) format(editor, 'fontSize', value);
+            });
+            toolbar.querySelector<HTMLInputElement>('[data-color]')?.addEventListener('input', (event) => {
+              format(editor, 'foreColor', (event.target as HTMLInputElement).value);
+            });
+          });
+
+          function setSlot(slot: string, src: string) {
+            const box = board.querySelector<HTMLElement>(`[data-photo-slot="${slot}"]`);
+            if (!box) return;
+            const image = box.querySelector<HTMLImageElement>('[data-photo-img]');
+            const empty = box.querySelector<HTMLElement>('[data-photo-empty]');
+            const remove = box.querySelector<HTMLElement>('[data-remove]');
+            const action = box.querySelector<HTMLElement>('[data-photo-action]');
+            if (image) {
+              if (src) image.src = src;
+              image.classList.toggle('hidden', !src);
+            }
+            empty?.classList.toggle('hidden', Boolean(src));
+            remove?.classList.toggle('hidden', !src);
+            if (action) action.textContent = src ? 'Replace' : 'Add photo';
+          }
+
+          function renderGallery(urls: string[]) {
+            const grid = document.querySelector<HTMLElement>('#gallery-grid');
+            const empty = document.querySelector<HTMLElement>('#gallery-empty');
+            if (!grid) return;
+            grid.replaceChildren();
+            urls.forEach((src, index) => {
+              const figure = document.createElement('figure');
+              figure.className = 'relative';
+              const image = document.createElement('img');
+              image.src = src;
+              image.alt = '';
+              image.className = 'h-36 w-full rounded-xl bg-slate-100 object-cover';
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.dataset.remove = 'gallery';
+              button.dataset.index = String(index);
+              button.className = 'absolute right-2 top-2 rounded-lg bg-white/95 px-2 py-1 text-xs font-semibold text-slate-800 shadow';
+              button.textContent = 'Remove';
+              figure.append(image, button);
+              grid.append(figure);
+            });
+            empty?.classList.toggle('hidden', urls.length > 0);
+          }
+
+          async function sendPhoto(payload: FormData) {
+            syncEditors();
+            const data = new FormData(form);
+            payload.forEach((value, key) => data.set(key, value));
+            status.className = 'text-sm text-slate-500';
+            status.textContent = 'Saving photo...';
+            board.setAttribute('aria-busy', 'true');
+            try {
+              const response = await fetch(location.pathname, { method: 'POST', body: data });
+              const result = await response.json();
+              if (!result.ok) throw new Error(result.error || 'The photo was not saved.');
+              setSlot('hero', result.photos.hero || '');
+              setSlot('logo', result.photos.logo || '');
+              renderGallery(result.photos.gallery || []);
+              Object.entries(result.fields || {}).forEach(([key, value]) => {
+                const input = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${key}"]`);
+                if (input) input.value = String(value ?? '');
+              });
+              status.className = 'text-sm text-green-700';
+              status.textContent = 'Photo saved.';
+            } catch (err) {
+              status.className = 'text-sm text-red-700';
+              status.textContent = err instanceof Error ? err.message : 'The photo was not saved.';
+            } finally {
+              board.removeAttribute('aria-busy');
+            }
+          }
+
+          board.addEventListener('click', (event) => {
+            const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-remove]');
+            if (!button?.dataset.remove) return;
+            const data = new FormData();
+            data.set('intent', 'remove-photo');
+            data.set('slot', button.dataset.remove);
+            if (button.dataset.index) data.set('index', button.dataset.index);
+            sendPhoto(data);
+          });
+          board.addEventListener('change', (event) => {
+            const input = event.target as HTMLInputElement;
+            if (!input.matches('[data-upload]') || !input.files?.[0]) return;
+            const data = new FormData();
+            data.set('intent', 'photo');
+            data.set('slot', input.dataset.upload || '');
+            data.set('file', input.files[0]);
+            input.value = '';
+            sendPhoto(data);
+          });
+        }
+</script>

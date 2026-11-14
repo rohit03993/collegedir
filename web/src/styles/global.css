@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  overflow-x: clip;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #111827;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+#college-sections.is-stuck {
+  margin-right: -1rem;
+  margin-left: -1rem;
+  width: calc(100% + 2rem);
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+#college-sections.is-stuck .college-stick-name {
+  display: block;
+}
+
+#college-sections a.is-current {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.college-anchor {
+  scroll-margin-top: 8rem;
+}
+
+.prose-setu h2,
+.prose-setu h3,
+.prose-setu h4 {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.prose-setu figure {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.prose-setu table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.prose-setu th,
+.prose-setu td {
+  border: 1px solid #e2e8f0;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose-setu p,
+.prose-setu li {
+  margin: 0.55rem 0;
+  line-height: 1.65;
+}
+
+.prose-setu ul,
+.prose-setu ol {
+  padding-left: 1.2rem;
+}
+
+.prose-setu ul {
+  list-style: disc;
+}
+
+.prose-setu ol {
+  list-style: decimal;
+}
+
+.prose-setu {
+  overflow-wrap: anywhere;
+}
+
+.prose-setu a {
+  color: #ea580c;
+}
+
+.prose-setu u {
+  text-decoration: underline;
+}
+
+.prose-setu font[size="1"],
+.prose-setu font[size="2"] {
+  font-size: 0.92rem;
+}
+
+.prose-setu font[size="4"],
+.prose-setu font[size="5"] {
+  font-size: 1.35rem;
+}
+
+.prose-setu font[size="6"],
+.prose-setu font[size="7"] {
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.editor {
+  min-height: 9rem;
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0.75rem 0.9rem;
+  outline: none;
+}
+
+.editor:focus {
+  border-color: #fb923c;
+}
+
+.editor:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+}
+
+.prose-setu img,
+.prose-setu table,
+.prose-setu pre {
+  max-width: 100%;
+}
+
+.page-grid > #filter-open {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+#filter-panel,
+.filter-backdrop,
+.filter-sheet-bar {
+  display: none;
+}
+
+.filter-launcher {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: 1.25rem;
+  margin: 0;
+  transform: translateX(-50%);
+}
+
+#filter-open:checked ~ .filter-launcher {
+  display: none;
+}
+
+#filter-open:checked ~ #filter-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin: 0;
+  max-height: none;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+#filter-open:checked ~ #filter-panel .filter-backdrop {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+#filter-open:checked ~ #filter-panel .filter-sheet {
+  position: relative;
+  z-index: 1;
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: #fff;
+  padding: 0.35rem 0.75rem 1rem;
+}
+
+#filter-open:checked ~ #filter-panel .filter-sheet-bar {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 0.65rem 0 0.35rem;
+}
+
+#filter-open:checked ~ #filter-panel #filters {
+  border: 0;
+}
+
+.filter-group > summary {
+  list-style: none;
+}
+
+.filter-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-group .filter-chevron {
+  transition: transform 0.15s ease;
+}
+
+.filter-group[open] .filter-chevron {
+  transform: rotate(180deg);
+}
+
+#filter-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+@media (min-width: 1024px) {
+  .page-grid {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .page-grid > #filter-open,
+  .filter-launcher,
+  .filter-backdrop,
+  .filter-sheet-bar {
+    display: none !important;
+  }
+
+  #filter-panel {
+    display: block !important;
+    position: sticky;
+    inset: auto;
+    top: 4.75rem;
+    z-index: auto;
+    max-height: calc(100vh - 6rem);
+    margin-bottom: 0;
+    overflow: auto;
+    background: transparent;
+  }
+
+  .filter-sheet {
+    max-height: none;
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  #filter-panel #filters {
+    border-width: 1px;
+  }
+}

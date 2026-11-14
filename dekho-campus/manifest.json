@@ -1,0 +1,57 @@
+[
+  {
+    "table": "colleges",
+    "rows": 13021,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\colleges.jsonl"
+  },
+  {
+    "table": "courses",
+    "rows": 877,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\courses.jsonl"
+  },
+  {
+    "table": "exams",
+    "rows": 503,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\exams.jsonl"
+  },
+  {
+    "table": "articles",
+    "rows": 5525,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\articles.jsonl"
+  },
+  {
+    "table": "scholarships",
+    "rows": 119,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\scholarships.jsonl"
+  },
+  {
+    "table": "states_cities",
+    "rows": 7470,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\states_cities.jsonl"
+  },
+  {
+    "table": "authors",
+    "rows": 20,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\authors.jsonl"
+  },
+  {
+    "table": "also_check_modules",
+    "rows": 3,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\also_check_modules.jsonl"
+  },
+  {
+    "table": "faqs",
+    "rows": 13570,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\faqs.jsonl"
+  },
+  {
+    "table": "course_fees",
+    "rows": 5447,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\course_fees.jsonl"
+  },
+  {
+    "table": "landing_pages",
+    "rows": 6,
+    "file": "F:\\Rohit Development\\admission setu\\dekho-campus\\landing_pages.jsonl"
+  }
+]
