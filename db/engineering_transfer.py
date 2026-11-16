@@ -1,7 +1,9 @@
-"""Copy CollegeDekho engineering facts from this PC to another database.
+"""Copy the local CollegeDekho page data onto another database.
 
-The catalogue on the server does not include these rows. They live in
-engineering_facts and engineering_tables after the local CollegeDekho match.
+This is the full set added on this PC after the catalogue import: NIRF rank,
+fee range, average package, approval, ownership, exams, and the course,
+admission, placement, cutoff, and scholarship tables. It also hides the
+duplicate colleges that are already hidden locally.
 
 On this PC, from the repo root:
 
@@ -10,10 +12,9 @@ On this PC, from the repo root:
 Copy that file to the server, then from the repo root there:
 
     python db/engineering_transfer.py load output/engineering.json
+    python db/index_search.py
 
-The load replaces facts and tables for the colleges in the file. It does not
-change college names, photos, or written sections. A slug that is not on the
-server is skipped.
+The load does not replace written sections, photos, or staff accounts.
 """
 
 import json
@@ -48,12 +49,17 @@ def export_file(path):
             """
         )
         tables = cursor.fetchall()
+        cursor.execute("SELECT slug FROM colleges WHERE is_active IS FALSE ORDER BY slug")
+        hidden = [row["slug"] for row in cursor.fetchall()]
     connection.close()
-    payload = {"facts": facts, "tables": tables}
+    payload = {"facts": facts, "tables": tables, "hidden": hidden}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")
     ranked = sum(1 for row in facts if row["nirf_rank"] is not None)
+    pages = sorted({row["page"] for row in tables})
     print(f"Wrote {len(facts)} colleges, {ranked} with a NIRF rank, {len(tables)} tables")
+    print(f"Table sections: {', '.join(pages) if pages else 'none'}")
+    print(f"Hidden colleges: {len(hidden)}")
     print(path)
 
 
@@ -61,6 +67,7 @@ def load_file(path):
     payload = json.loads(path.read_text(encoding="utf-8"))
     facts = payload["facts"]
     tables = payload["tables"]
+    hidden = payload.get("hidden") or []
     connection = connect()
     with connection.cursor() as cursor:
         cursor.execute("SELECT slug FROM colleges")
@@ -122,6 +129,12 @@ def load_file(path):
                 for row in table_rows
             ],
         )
+        present_hidden = [slug for slug in hidden if slug in known]
+        if present_hidden:
+            cursor.execute(
+                "UPDATE colleges SET is_active = false WHERE slug = ANY(%s)",
+                (present_hidden,),
+            )
         cursor.execute(
             "SELECT COUNT(*)::int AS total FROM engineering_facts WHERE nirf_rank IS NOT NULL"
         )
@@ -130,6 +143,7 @@ def load_file(path):
     connection.close()
     print(f"Loaded {len(kept)} colleges and {len(table_rows)} tables. Skipped {missing} missing colleges.")
     print(f"NIRF ranks now stored: {ranked}")
+    print(f"Hidden duplicate colleges: {len(present_hidden)}")
 
 
 def main():
