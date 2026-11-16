@@ -1,5 +1,7 @@
 ---
 import '../../styles/global.css';
+import Mark from '../../components/Mark.astro';
+import { brandState } from '../../lib/brand';
 import { ApiError } from '../../lib/api';
 import { adminFetch, saveSession, tokenFrom } from '../../lib/admin';
 
@@ -45,6 +47,7 @@ if (Astro.request.method === 'POST' && ready) {
 }
 
 const field = 'h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-orange-400';
+const brand = brandState();
 ---
 
 <html lang="en">
@@ -52,12 +55,12 @@ const field = 'h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outli
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{setup ? 'Create admin | Admission Setu' : 'Admin sign in | Admission Setu'}</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type={brand.faviconType} href={brand.favicon} />
   </head>
   <body class="min-h-screen bg-slate-100">
     <main class="mx-auto flex min-h-screen max-w-md items-center px-4 py-10">
       <section class="w-full rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p class="text-2xl font-black tracking-tight">Admission<span class="text-orange-500">Setu</span></p>
+        <p class="text-2xl" aria-label="Admission Setu"><Mark logo={brand.logo} /></p>
         <h1 class="mt-6 text-xl font-bold">{setup ? 'Create the owner account' : 'Admin sign in'}</h1>
         <p class="mt-2 text-sm leading-6 text-slate-600">
           {setup

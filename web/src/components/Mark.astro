@@ -1,0 +1,17 @@
+---
+interface Props {
+  logo?: string;
+  light?: boolean;
+  compact?: boolean;
+  short?: boolean;
+}
+
+const { logo = '', light = false, compact = false, short = false } = Astro.props;
+---
+
+<span class="inline-flex min-w-0 items-center gap-2">
+  {logo && <img src={logo} alt="" class:list={['h-8 w-8 shrink-0 rounded-lg object-contain', light ? 'bg-white' : 'bg-slate-50']} />}
+  <span class:list={['truncate font-black tracking-tight', compact ? 'text-base sm:text-lg' : 'text-lg', light ? 'text-white' : 'text-slate-900']}>
+    <span class:list={[short && 'hidden sm:inline']}>Admission</span><span class="text-orange-500">Setu</span>
+  </span>
+</span>

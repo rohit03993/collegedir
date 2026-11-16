@@ -1,0 +1,92 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { adminFetch, tokenFrom } from '../../lib/admin';
+import { brandState, removeBrand, saveBrand, type BrandSlot } from '../../lib/brand';
+
+const token = tokenFrom(Astro.cookies);
+if (!token) return Astro.redirect('/admin/login');
+
+interface User { name: string; role: string }
+let user: User;
+try {
+  user = await adminFetch<User>(token, '/api/admin/me');
+} catch {
+  return Astro.redirect('/admin/login');
+}
+if (user.role !== 'admin') return Astro.redirect('/admin');
+
+let error = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const intent = String(form.get('intent') || '');
+  const slot = String(form.get('slot') || '');
+  const chosen: BrandSlot | null = slot === 'logo' || slot === 'favicon' ? slot : null;
+  try {
+    if (!chosen) throw new Error('Choose the logo or the favicon.');
+    if (intent === 'remove') {
+      removeBrand(chosen);
+    } else {
+      const file = form.get('file');
+      if (!(file instanceof Blob) || file.size === 0) throw new Error('Choose an image.');
+      saveBrand(chosen, Buffer.from(await file.arrayBuffer()));
+    }
+    return Astro.redirect('/admin/brand?saved=1');
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'The image was not saved.';
+  }
+}
+
+const brand = brandState();
+const saved = Astro.url.searchParams.get('saved') === '1';
+const cards = [
+  {
+    slot: 'logo',
+    title: 'Logo',
+    note: 'Shown beside the name in the header and footer. A wide or square image both work.',
+    src: brand.logo,
+    accept: 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml',
+  },
+  {
+    slot: 'favicon',
+    title: 'Favicon',
+    note: 'The small icon on the browser tab. A square PNG or ICO is the clearest.',
+    src: brand.favicon === '/favicon.svg' ? '' : brand.favicon,
+    accept: 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/x-icon,.ico',
+  },
+];
+---
+
+<Admin title="Brand | Admin" user={user} section="brand">
+  <h1 class="text-2xl font-black tracking-tight">Brand</h1>
+  <p class="mt-1 max-w-2xl text-sm text-slate-600">The site name stays Admission Setu. Add your logo and the browser icon here. Leave either one empty to keep the current mark.</p>
+  {saved && <p class="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">Saved.</p>}
+  {error && <p class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+  <div class="mt-6 grid gap-4 lg:grid-cols-2">
+    {cards.map((card) => (
+      <section class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <h2 class="text-lg font-bold">{card.title}</h2>
+        <p class="mt-1 text-sm text-slate-500">{card.note}</p>
+        <div class="mt-4 flex h-28 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50">
+          {card.src ? (
+            <img src={card.src} alt="" class="max-h-20 max-w-[12rem] object-contain" />
+          ) : (
+            <span class="text-sm text-slate-500">{card.slot === 'favicon' ? 'Using the orange Setu icon' : 'No logo yet'}</span>
+          )}
+        </div>
+        <form method="post" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="intent" value="save" />
+          <input type="hidden" name="slot" value={card.slot} />
+          <input type="file" name="file" accept={card.accept} required class="max-w-full text-sm" />
+          <button type="submit" class="h-10 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white">Save</button>
+        </form>
+        {card.src && (
+          <form method="post" class="mt-3">
+            <input type="hidden" name="intent" value="remove" />
+            <input type="hidden" name="slot" value={card.slot} />
+            <button type="submit" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Remove</button>
+          </form>
+        )}
+      </section>
+    ))}
+  </div>
+</Admin>

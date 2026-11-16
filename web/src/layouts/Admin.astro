@@ -1,18 +1,24 @@
 ---
 import '../styles/global.css';
+import Mark from '../components/Mark.astro';
+import { brandState } from '../lib/brand';
 
 interface Props {
   title: string;
   user: { name: string; role: string };
-  section: 'dashboard' | 'colleges' | 'team';
+  section: 'dashboard' | 'colleges' | 'team' | 'brand';
 }
 
 const { title, user, section } = Astro.props;
+const brand = brandState();
 const links = [
   ['dashboard', '/admin', 'Dashboard'],
   ['colleges', '/admin/colleges', 'Colleges'],
 ];
-if (user.role === 'admin') links.push(['team', '/admin/users', 'Team']);
+if (user.role === 'admin') {
+  links.push(['brand', '/admin/brand', 'Brand']);
+  links.push(['team', '/admin/users', 'Team']);
+}
 const item = 'flex items-center rounded-xl px-3 py-2 text-sm font-semibold';
 ---
 
@@ -21,13 +27,13 @@ const item = 'flex items-center rounded-xl px-3 py-2 text-sm font-semibold';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type={brand.faviconType} href={brand.favicon} />
   </head>
   <body class="min-h-screen bg-slate-100 text-slate-900">
     <div class="lg:grid lg:grid-cols-[240px_1fr]">
       <aside class="bg-slate-950 text-slate-300 lg:min-h-screen">
         <div class="flex items-center justify-between gap-3 px-4 py-4 lg:block">
-          <a href="/admin" class="text-lg font-black tracking-tight text-white">Admission<span class="text-orange-500">Setu</span></a>
+          <a href="/admin" aria-label="Admission Setu"><Mark logo={brand.logo} light /></a>
           <p class="mt-1 hidden text-xs text-slate-500 lg:block">Admin</p>
         </div>
         <nav class="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:px-3">
