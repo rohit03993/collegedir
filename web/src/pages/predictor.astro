@@ -158,18 +158,14 @@ function branchHref(name: string) {
               <h2 class="text-2xl font-black tracking-tight text-slate-900">{number.format(section.inside)} seats for rank {number.format(result.rank)}</h2>
               <p class="mt-1 text-sm text-slate-500">{result.exam}, {result.category}, {result.gender}, {result.homeState}{result.crl ? `, common rank ${number.format(result.crl)}` : ''}.</p>
               <div class="mt-3 flex flex-wrap gap-2">
-                <p class="min-w-28 rounded-2xl border border-slate-200 bg-white px-4 py-2">
-                  <span class="block text-xs text-slate-500">JoSAA</span>
+                <p class="min-w-28 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2">
+                  <span class="block text-xs font-bold text-blue-800">JoSAA</span>
                   <span class="text-lg font-bold text-slate-900">{number.format(section.josaaInside)}</span>
                 </p>
-                {
-                  section.csabInside !== null && (
-                    <p class="min-w-28 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2">
-                      <span class="block text-xs text-orange-700">CSAB</span>
-                      <span class="text-lg font-bold text-slate-900">{number.format(section.csabInside)}</span>
-                    </p>
-                  )
-                }
+                <p class="min-w-28 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2">
+                  <span class="block text-xs font-bold text-orange-800">CSAB</span>
+                  <span class="text-lg font-bold text-slate-900">{section.csabInside === null ? 'Not used' : number.format(section.csabInside)}</span>
+                </p>
               </div>
               <p class="mt-3 max-w-3xl text-sm text-slate-600">{section.detail} {result.note}{branch ? ` Showing ${branch}.` : ''}</p>
               {
@@ -223,12 +219,15 @@ function branchHref(name: string) {
                           {college.seats.map((seat) => (
                             <div data-seat={seatKey(college.college, seat)} data-chance={seat.chance} class:list={['flex min-w-0 flex-col gap-2 rounded-xl px-3 py-2 sm:flex-row sm:items-center sm:justify-between', seat.chance === 'Safer' ? 'bg-green-50' : seat.chance === 'Possible' ? 'bg-orange-50' : 'bg-slate-50']}>
                               <div class="min-w-0">
-                                <p class="break-words text-sm font-semibold text-slate-900">{seat.branch}</p>
+                                <p class="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-slate-900">
+                                  <span class:list={['rounded-full px-2 py-0.5 text-xs font-bold', seat.roundName === 'CSAB round' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white']}>
+                                    {seat.roundName === 'CSAB round' ? `CSAB${seat.round ? ` ${seat.round}` : ''}` : 'JoSAA'}
+                                  </span>
+                                  {seat.branch}
+                                </p>
                                 <p class="mt-1 break-words text-xs text-slate-600">
                                   {seat.state} · {seat.quota}
                                   {seat.gender ? ` · ${seat.gender}` : ''}
-                                  {` · ${seat.roundName}`}
-                                  {seat.roundName === 'CSAB round' && seat.round ? ` ${seat.round}` : ''}
                                 </p>
                               </div>
                               <div class="flex items-center justify-between gap-4 sm:shrink-0">
