@@ -581,6 +581,9 @@ def update_college(slug: str, body: dict, staff=Depends(current_staff), db=Depen
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # The staff lookup already opened a transaction, so the block above only
+    # released a savepoint. Commit before the connection closes.
+    db.commit()
     notice = _refresh_search(db, new_slug, slug if new_slug != slug else None)
     return {"slug": new_slug, "notice": notice}
 
