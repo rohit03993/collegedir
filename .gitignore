@@ -15,5 +15,4 @@ typesense-data/
 web/dist/
 web/.astro/
 web/public/media/
-output/engineering.json
 frontend/node_modules/
