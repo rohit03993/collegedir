@@ -42,7 +42,13 @@ body {
 }
 
 .college-anchor {
-  scroll-margin-top: 8rem;
+  scroll-margin-top: 12rem;
+}
+
+@media (min-width: 640px) {
+  .college-anchor {
+    scroll-margin-top: 7.5rem;
+  }
 }
 
 .prose-setu h2,

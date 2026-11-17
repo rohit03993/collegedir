@@ -74,10 +74,16 @@ function collegeLinks(stream: string) {
   </head>
   <body>
     <header class="sticky top-0 z-20 border-b border-slate-200 bg-white">
-      <div class="mx-auto flex h-16 max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
-        <a href="/" class="shrink-0" aria-label="Admission Setu">
-          <Mark logo={brand.logo} compact short />
-        </a>
+      <div class="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+        <div class="flex min-w-0 items-center justify-between gap-3 sm:contents">
+          <a href="/" class="min-w-0 shrink" aria-label="Admission Setu">
+            <Mark logo={brand.logo} compact short large />
+          </a>
+          <a
+            href={signedIn ? '/admin' : '/admin/login'}
+            class="inline-flex h-10 shrink-0 items-center rounded-full bg-slate-900 px-3.5 text-sm font-semibold text-white hover:bg-slate-800 sm:hidden"
+          >{signedIn ? 'Admin' : 'Sign in'}</a>
+        </div>
         {
           menu && (
             <nav class="ml-2 hidden items-center gap-1 xl:flex" aria-label="Main">
@@ -106,7 +112,7 @@ function collegeLinks(stream: string) {
         </form>
         <a
           href={signedIn ? '/admin' : '/admin/login'}
-          class="inline-flex h-10 shrink-0 items-center rounded-full bg-slate-900 px-3.5 text-sm font-semibold text-white hover:bg-slate-800 sm:px-4"
+          class="hidden h-10 shrink-0 items-center rounded-full bg-slate-900 px-3.5 text-sm font-semibold text-white hover:bg-slate-800 sm:inline-flex sm:px-4"
         >{signedIn ? 'Admin' : 'Sign in'}</a>
       </div>
       {

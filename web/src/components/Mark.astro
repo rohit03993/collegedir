@@ -4,14 +4,22 @@ interface Props {
   light?: boolean;
   compact?: boolean;
   short?: boolean;
+  large?: boolean;
 }
 
-const { logo = '', light = false, compact = false, short = false } = Astro.props;
+const { logo = '', light = false, compact = false, short = false, large = false } = Astro.props;
 ---
 
 {
   logo && !light ? (
-    <img src={logo} alt="Admission Setu" class="h-9 w-auto max-w-[9.5rem] object-contain object-left sm:h-10 sm:max-w-[12rem]" />
+    <img
+      src={logo}
+      alt="Admission Setu"
+      class:list={[
+        'w-auto object-contain object-left',
+        large ? 'h-14 max-w-full sm:h-16 sm:max-w-[22rem]' : 'h-12 max-w-[14rem]',
+      ]}
+    />
   ) : (
     <span class:list={['truncate font-black tracking-tight', compact ? 'text-base sm:text-lg' : 'text-lg', light ? 'text-white' : 'text-slate-900']}>
       <span class:list={[short && 'hidden sm:inline']}>Admission</span><span class="text-orange-500">Setu</span>
