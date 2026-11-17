@@ -161,11 +161,11 @@ const pageNav = college
 
           {
             pageNav.length > 1 && (
-              <nav id="college-sections" class="sticky top-28 z-30 rounded-2xl border border-slate-200 bg-white px-3 py-2 xl:top-20">
-                <p class="college-stick-name mb-1 hidden truncate text-sm font-bold text-slate-900">{college.name}</p>
-                <div class="flex gap-1 overflow-x-auto">
+              <nav id="college-sections" class="sticky top-28 z-30 max-w-full rounded-2xl border border-slate-200 bg-white p-2 xl:top-20">
+                <p class="college-stick-name mb-1 hidden truncate px-1 text-sm font-bold text-slate-900">{college.name}</p>
+                <div class="flex flex-wrap gap-1.5">
                   {pageNav.map(([id, label]) => (
-                    <a href={`#${id}`} class="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-orange-50 hover:text-orange-700">{label}</a>
+                    <a href={`#${id}`} class="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700">{label}</a>
                   ))}
                 </div>
               </nav>
