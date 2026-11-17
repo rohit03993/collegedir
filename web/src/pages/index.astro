@@ -14,88 +14,111 @@ try {
 }
 
 const number = new Intl.NumberFormat('en-IN');
+const featured = home?.next ?? [];
+const featuredNames = new Set(featured.map((stream) => stream.name));
+const moreStreams = (home?.streams ?? []).filter((stream) => !featuredNames.has(stream.name));
 ---
 
-<Base title="Admission Setu">
+<Base
+  title="Admission Setu"
+  description="Search colleges, courses, and exams on Admission Setu. Setu Predictor uses the official 2026 JoSAA and CSAB closing ranks."
+>
   <section class="bg-[linear-gradient(118deg,#fff7f1_0%,#f8fbff_48%,#eef5ff_100%)]">
-    <div class="mx-auto max-w-6xl px-4 py-12 md:py-16">
-      <h1 class="max-w-3xl text-3xl font-black tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
-        Discover your ideal path
-      </h1>
-      <p class="mt-4 max-w-2xl text-base text-slate-600">
-        Search colleges, courses, and places. Fees, photos, and approvals appear only when the catalogue has them.
-      </p>
-      <a href="/predictor" class="mt-3 inline-flex text-sm font-semibold text-orange-600">Setu Predictor for engineering colleges</a>
-      <form action="/colleges" method="get" class="mt-6 flex max-w-2xl flex-col gap-2 sm:flex-row" role="search">
-        <label class="sr-only" for="hero-search">Search colleges, courses, cities, or states</label>
-        <input
-          id="hero-search"
-          type="search"
-          name="q"
-          placeholder="Search colleges, courses, cities, or states"
-          class="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 outline-none focus:border-orange-400"
-        />
-        <button type="submit" class="h-12 rounded-2xl bg-orange-500 px-5 font-semibold text-white">Search</button>
-      </form>
-      {
-        home?.suggestions.length ? (
-          <div class="mt-5">
-            <p class="text-sm font-semibold text-slate-700">Suggested searches</p>
-            <div class="mt-2 flex flex-wrap gap-2">
-              {home.suggestions.map((item) => (
-                <a href={item.href} class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
-                  {item.label}
-                </a>
-              ))}
+    <div class="mx-auto grid max-w-6xl items-stretch gap-6 px-4 py-8 md:gap-8 md:py-14 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.75fr)]">
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-orange-600">Admission Setu</p>
+        <h1 class="mt-2 max-w-3xl text-3xl font-black tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+          Discover your ideal path
+        </h1>
+        <p class="mt-3 max-w-xl text-base leading-7 text-slate-600">
+          Search a college, a course, or a city. Open a stream when you already know the field.
+        </p>
+        <form action="/colleges" method="get" class="mt-5 flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center sm:gap-0 sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1 sm:shadow-sm" role="search">
+          <label class="sr-only" for="hero-search">Search colleges, courses, cities, or states</label>
+          <input
+            id="hero-search"
+            type="search"
+            name="q"
+            placeholder="Search colleges, courses, cities, or states"
+            class="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 outline-none focus:border-orange-400 sm:rounded-none sm:border-0 sm:focus:border-transparent"
+          />
+          <button type="submit" class="h-12 rounded-2xl bg-orange-500 px-5 font-semibold text-white hover:bg-orange-600 sm:rounded-xl sm:px-6">Search</button>
+        </form>
+        {
+          home?.suggestions.length ? (
+            <div class="mt-4">
+              <p class="text-sm font-semibold text-slate-700">Suggested searches</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {home.suggestions.map((item) => (
+                  <a href={item.href} class="rounded-full border border-orange-200 bg-white px-3 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-50">
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null
-      }
+          ) : null
+        }
+      </div>
+      <a href="/predictor" class="flex h-full flex-col justify-between rounded-3xl bg-slate-950 p-5 text-white shadow-sm sm:p-6">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-orange-300">Setu Predictor</p>
+          <p class="mt-2 text-xl font-bold leading-snug">India’s most trusted rank predictor</p>
+          <p class="mt-3 text-sm leading-6 text-slate-300">India’s best prediction for 2027. Engineering seats use the official 2026 JoSAA and CSAB closing ranks.</p>
+        </div>
+        <span class="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-orange-500 px-5 text-sm font-semibold text-white">Check your rank</span>
+      </a>
     </div>
   </section>
 
-  <main class="mx-auto max-w-6xl space-y-12 px-4 py-10">
+  <main class="mx-auto max-w-6xl space-y-10 px-4 py-8 md:space-y-14 md:py-12">
     {error && <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
     {
-      home?.next.length ? (
+      featured.length ? (
         <section>
-          <h2 class="text-xl font-bold">What to do next</h2>
-          <p class="mt-1 text-sm text-slate-600">Choose a stream and open the college list.</p>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {home.next.map((stream) => (
-              <a href={stream.href} class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <span class="block font-semibold">{stream.name}</span>
-                <span class="mt-1 block text-sm text-slate-500">{number.format(stream.count)} colleges</span>
+          <h2 class="text-xl font-bold text-slate-900">Choose a stream</h2>
+          <p class="mt-1 text-sm text-slate-600">The largest lists in the catalogue. Each count is the colleges in that stream.</p>
+          <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {featured.map((stream) => (
+              <a href={stream.href} class="flex min-h-[6.5rem] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300">
+                <span class="font-semibold text-slate-900">{stream.name}</span>
+                <span class="mt-3 block">
+                  <span class="block text-sm text-slate-500">{number.format(stream.count)} colleges</span>
+                  <span class="mt-1 block text-sm font-semibold text-orange-600">Open list</span>
+                </span>
               </a>
             ))}
           </div>
-        </section>
-      ) : null
-    }
-    {
-      home?.streams.length ? (
-        <section>
-          <h2 class="text-xl font-bold">Streams</h2>
-          <div class="mt-4 flex flex-wrap gap-2">
-            {home.streams.map((stream) => (
-              <a href={stream.href} class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium">
-                {stream.name}
-                <span class="text-slate-500"> {number.format(stream.count)}</span>
-              </a>
-            ))}
-          </div>
+          {
+            moreStreams.length ? (
+              <div class="mt-4 flex flex-wrap gap-2">
+                {moreStreams.map((stream) => (
+                  <a href={stream.href} class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:border-orange-300">
+                    {stream.name}
+                    <span class="text-slate-500"> {number.format(stream.count)}</span>
+                  </a>
+                ))}
+              </div>
+            ) : null
+          }
         </section>
       ) : null
     }
     {
       home?.colleges.length ? (
         <section>
-          <div class="flex items-center justify-between gap-3">
-            <h2 class="text-xl font-bold">Top colleges</h2>
-            <a href="/colleges" class="text-sm font-semibold text-orange-600">View all</a>
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Top colleges</h2>
+              <p class="mt-1 text-sm text-slate-600">A short list from the catalogue. The full list is one tap away.</p>
+            </div>
+            <a href="/colleges" class="shrink-0 text-sm font-semibold text-orange-600">View all</a>
           </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {home.colleges.map((college) => <CollegeCard college={college} />)}
+          <div class="home-row -mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4">
+            {home.colleges.map((college) => (
+              <div class="w-[78%] max-w-[20rem] shrink-0 snap-start sm:w-[46%] md:w-auto md:max-w-none">
+                <CollegeCard college={college} />
+              </div>
+            ))}
           </div>
         </section>
       ) : null
@@ -103,16 +126,19 @@ const number = new Intl.NumberFormat('en-IN');
     {
       home?.exams.length ? (
         <section>
-          <div class="flex items-center justify-between gap-3">
-            <h2 class="text-xl font-bold">Top exams</h2>
-            <a href="/exams" class="text-sm font-semibold text-orange-600">View all</a>
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Top exams</h2>
+              <p class="mt-1 text-sm text-slate-600">Dates and details appear when the catalogue has them.</p>
+            </div>
+            <a href="/exams" class="shrink-0 text-sm font-semibold text-orange-600">View all</a>
           </div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {home.exams.map((exam) => (
-              <a href={exam.href} class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <span class="block font-semibold">{exam.name}</span>
-                {named(exam.category) && <span class="mt-1 block text-sm text-slate-600">{named(exam.category)}</span>}
-                {shownDate(exam.date) && <span class="mt-1 block text-sm text-slate-500">{shownDate(exam.date)}</span>}
+              <a href={exam.href} class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-300">
+                <span class="font-semibold text-slate-900">{exam.name}</span>
+                {named(exam.category) && <span class="mt-2 w-fit rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{named(exam.category)}</span>}
+                {shownDate(exam.date) && <span class="mt-auto pt-3 text-sm text-slate-500">{shownDate(exam.date)}</span>}
               </a>
             ))}
           </div>

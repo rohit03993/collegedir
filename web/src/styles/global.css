@@ -54,6 +54,11 @@ body {
   display: block;
 }
 
+.home-row {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
 #site-menu:checked ~ div .menu-icon {
   background: transparent;
 }
