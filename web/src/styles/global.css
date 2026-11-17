@@ -21,6 +21,53 @@ body {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
+.menu-icon,
+.menu-icon::before,
+.menu-icon::after {
+  display: block;
+  width: 1.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+
+.menu-icon {
+  position: relative;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  position: absolute;
+  left: 0;
+}
+
+.menu-icon::before {
+  top: -6px;
+}
+
+.menu-icon::after {
+  top: 6px;
+}
+
+#site-menu:checked ~ .mobile-menu {
+  display: block;
+}
+
+#site-menu:checked ~ div .menu-icon {
+  background: transparent;
+}
+
+#site-menu:checked ~ div .menu-icon::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+#site-menu:checked ~ div .menu-icon::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
 #college-sections.is-stuck {
   margin-right: -1rem;
   margin-left: -1rem;
@@ -43,7 +90,7 @@ body {
 }
 
 .college-anchor {
-  scroll-margin-top: 8.5rem;
+  scroll-margin-top: 7rem;
 }
 
 @media (min-width: 1280px) {
