@@ -42,12 +42,12 @@ body {
 }
 
 .college-anchor {
-  scroll-margin-top: 12rem;
+  scroll-margin-top: 8.5rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1280px) {
   .college-anchor {
-    scroll-margin-top: 7.5rem;
+    scroll-margin-top: 6rem;
   }
 }
 

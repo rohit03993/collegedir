@@ -1,0 +1,23 @@
+---
+import { brandState } from '../lib/brand';
+
+const brand = brandState();
+const raster = brand.favicon.startsWith('/brand/') && brand.faviconType !== 'image/svg+xml';
+---
+
+{
+  raster ? (
+    <>
+      <link rel="icon" type={brand.faviconType} href={brand.favicon} />
+      <link rel="shortcut icon" href={brand.favicon} />
+      <link rel="apple-touch-icon" href={brand.favicon} />
+    </>
+  ) : (
+    <>
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+      <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    </>
+  )
+}

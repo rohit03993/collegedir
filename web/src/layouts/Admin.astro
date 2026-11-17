@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Favicon from '../components/Favicon.astro';
 import Mark from '../components/Mark.astro';
 import { brandState } from '../lib/brand';
 
@@ -27,7 +28,7 @@ const item = 'flex items-center rounded-xl px-3 py-2 text-sm font-semibold';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <link rel="icon" type={brand.faviconType} href={brand.favicon} />
+    <Favicon />
   </head>
   <body class="min-h-screen bg-slate-100 text-slate-900">
     <div class="lg:grid lg:grid-cols-[240px_1fr]">

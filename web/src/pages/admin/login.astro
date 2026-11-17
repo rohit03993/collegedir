@@ -1,5 +1,6 @@
 ---
 import '../../styles/global.css';
+import Favicon from '../../components/Favicon.astro';
 import Mark from '../../components/Mark.astro';
 import { brandState } from '../../lib/brand';
 import { ApiError } from '../../lib/api';
@@ -55,7 +56,7 @@ const brand = brandState();
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{setup ? 'Create admin | Admission Setu' : 'Admin sign in | Admission Setu'}</title>
-    <link rel="icon" type={brand.faviconType} href={brand.favicon} />
+    <Favicon />
   </head>
   <body class="min-h-screen bg-slate-100">
     <main class="mx-auto flex min-h-screen max-w-md items-center px-4 py-10">

@@ -33,7 +33,7 @@ export function brandState() {
   const favicon = listed('favicon');
   return {
     logo: logo ? `/brand/logo?v=${logo.modified}` : '',
-    favicon: favicon ? `/brand/favicon?v=${favicon.modified}` : '/favicon.svg',
+    favicon: favicon ? `/brand/favicon` : '/favicon.svg',
     faviconType: favicon ? brandType(favicon.name) : 'image/svg+xml',
   };
 }
