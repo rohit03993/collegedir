@@ -75,11 +75,12 @@ function collegeLinks(stream: string) {
   <body>
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white">
       <input id="site-menu" type="checkbox" class="peer sr-only" />
-      <div class="mx-auto flex h-[4.5rem] max-w-6xl items-center justify-between gap-3 px-4 xl:hidden">
-        <a href="/" class="min-w-0" aria-label="Admission Setu">
+      <div class="mx-auto grid h-[4.5rem] max-w-6xl grid-cols-[2.75rem_1fr_2.75rem] items-center px-4 xl:hidden">
+        <span aria-hidden="true"></span>
+        <a href="/" class="flex min-w-0 justify-center" aria-label="Admission Setu">
           <Mark logo={brand.logo} compact short large />
         </a>
-        <label for="site-menu" class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-900" aria-label="Open menu">
+        <label for="site-menu" class="grid h-11 w-11 cursor-pointer place-items-center justify-self-end rounded-xl border border-slate-200 text-slate-900" aria-label="Open menu">
           <span class="menu-icon" aria-hidden="true"></span>
         </label>
       </div>
